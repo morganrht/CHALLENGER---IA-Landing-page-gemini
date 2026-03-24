@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: subscribers
+    // Fields:
+    //   - email: string (required, email format)
+    //   - subscribedAt: timestamp (required)
+    //
+    // Collection: users
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required, email format)
+    //   - displayName: string (optional)
+    //   - role: string (required, enum: ['admin', 'user'])
+    //
+    // Collection: users/{userId}/chats
+    // Fields:
+    //   - userId: string (required)
+    //   - role: string (required, enum: ['user', 'model'])
+    //   - content: string (required)
+    //   - timestamp: timestamp (required)
+    //   - friction: string (optional, enum: ['soft', 'medium', 'extreme'])
+    //   - persona: string (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "Morgan19.reichert@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    match /subscribers/{subscriberId} {
+      allow read: if isAdmin();
+      allow create: if isValidEmail(request.resource.data.email) &&
+                      request.resource.data.subscribedAt is timestamp &&
+                      hasOnlyAllowedFields(['email', 'subscribedAt']);
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && 
+                      isOwner(userId) && 
+                      request.resource.data.uid == userId &&
+                      isValidEmail(request.resource.data.email) &&
+                      (request.resource.data.role == 'user' || isAdmin()) &&
+                      hasOnlyAllowedFields(['uid', 'email', 'displayName', 'role']);
+      allow update: if isAuthenticated() && 
+                      isOwner(userId) && 
+                      request.resource.data.role == resource.data.role &&
+                      hasOnlyAllowedFields(['uid', 'email', 'displayName', 'role']);
+    }
+
+    match /users/{userId}/chats/{chatId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) &&
+                      request.resource.data.userId == userId &&
+                      request.resource.data.role in ['user', 'model'] &&
+                      request.resource.data.content is string &&
+                      request.resource.data.content.size() < 10000 &&
+                      request.resource.data.timestamp is timestamp &&
+                      hasOnlyAllowedFields(['userId', 'role', 'content', 'timestamp', 'friction', 'persona']);
+    }
+  }
+}

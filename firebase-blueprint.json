@@ -1,0 +1,97 @@
+{
+  "entities": {
+    "Subscriber": {
+      "title": "Subscriber",
+      "description": "A person who has subscribed to the newsletter.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The email address of the subscriber."
+        },
+        "subscribedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date and time the subscription was created."
+        }
+      },
+      "required": ["email", "subscribedAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "A message in a chat conversation.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who sent the message."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["user", "model"],
+          "description": "The role of the message sender."
+        },
+        "content": {
+          "type": "string",
+          "description": "The text content of the message."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time the message was sent."
+        },
+        "friction": {
+          "type": "string",
+          "enum": ["soft", "medium", "extreme"],
+          "description": "The friction level for this message."
+        },
+        "persona": {
+          "type": "string",
+          "description": "The persona used for this message."
+        }
+      },
+      "required": ["userId", "role", "content", "timestamp"]
+    },
+    "User": {
+      "title": "User",
+      "description": "A user of the application.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The unique ID of the user."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The email address of the user."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The display name of the user."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "user"],
+          "description": "The role of the user."
+        }
+      },
+      "required": ["uid", "email"]
+    }
+  },
+  "firestore": {
+    "/subscribers/{subscriberId}": {
+      "schema": "Subscriber",
+      "description": "Collection of newsletter subscribers."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of user profiles."
+    },
+    "/users/{userId}/chats/{chatId}": {
+      "schema": "ChatMessage",
+      "description": "Subcollection of chat messages for a user."
+    }
+  }
+}
